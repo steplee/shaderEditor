@@ -3,10 +3,13 @@ var budo = require('budo')
 var fs = require('fs')
 var fsPromises = require('fs/promises')
 
+global.curPromise = null;
+global.curLive = null;
+
 var app = budo('./app.js', {
+  //watchGlob: 'src/**',
   middleware: function (req, res, next) {
     let pathname = url.parse(req.url).pathname
-    console.log('get',pathname)
 
     if (pathname.endsWith('/data')) {
       console.log('Handling', pathname)
@@ -37,12 +40,27 @@ var app = budo('./app.js', {
         res.end(JSON.stringify(obj));
       });
 
+    } else if (pathname.endsWith('keepLive')) {
+      //console.log('handle KeepLive')
+      global.curLive = res;
+      //global.curPromise = new Promise();
+      //res.statusCode = 200;
+      //res.end('1.');
+
     } else if (pathname.startsWith('/proj/')) {
       fs.readFile('show.html', (err,data) => {
         if (err) {res.statusCode=404; res.end("show.html not found...");}
         res.statusCode = 200
         res.end(data)
       })
+
+    } else {
+      console.log('404',pathname)
+      // fall through to other routes
+      // -->: There is a default route that handles regular http requests (e.g. script src from html)
+      next()
+    }
+  }
       /*
     } else if (
        pathname === '/main' ||
@@ -61,12 +79,20 @@ var app = budo('./app.js', {
         res.end(data)
       })
       */
-
-    } else {
-      console.log(pathname)
-      // fall through to other routes
-      // -->: There is a default route that handles regular http requests (e.g. script src from html)
-      next()
-    }
-  }
 })
+
+app.watch('src/**');
+app.on('watch', function(ev, file) {
+  console.log('watched',ev,file);
+
+  let res = global.curLive;
+  fs.readFile(file, {'encoding':'utf8'}, (err,data) => {
+    if (err) {res.statusCode=404; res.end();}
+    res.statusCode = 200
+    let name = file.split('/'); name = name[name.length-1];
+    name = name.split('.')[0];
+    let msg = JSON.stringify({"name":name, "data":data});
+    //console.log("sending",msg)
+    res.end(msg)
+  })
+});

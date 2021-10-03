@@ -11,4 +11,3 @@ uniform ivec2 iResolution;
 void main() {
   outColor = vec4(0.,0., 1., 1.);
 }
-

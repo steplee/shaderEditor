@@ -13,7 +13,7 @@ uniform sampler2D bufferA;
 void main() {
   vec2 fragCoord = v_uv * vec2(iResolution);
   float d = length(iMouse.xy - fragCoord) * .01;
-  outColor = vec4(sin(v_uv.y+iTime*4.), sin(v_uv.x+iTime), d, 1.);
+  outColor = vec4(sin(v_uv.y+iTime*4.), sin(v_uv.x+iTime), d, 1.) * .5;
 
-  if (v_uv.x < .5) outColor = texture(bufferA, v_uv);
+  if (v_uv.x < .25) outColor = texture(bufferA, v_uv);
 }

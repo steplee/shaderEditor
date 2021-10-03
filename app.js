@@ -72,15 +72,33 @@ function setupViewer() {
   if (target.endsWith('/')) target += 'data';
   else target += '/data';
   //fetch('http://localhost:9966/getAll')
-  console.log('HOST',window.location.hostname)
-  console.log('TARGET',target)
   fetch(target)
     .then(resp => resp.json())
     .then(data => handleAllDataFetch(data))
 
-  document.start();
+  target = window.location.pathname;
+  if (target.endsWith('/')) target += 'keepLive';
+  else target += '/keepLive';
+  console.log('KEEPLIVE', target);
+  fetch(target)
+    .then(resp => resp.json())
+    .then(handleLiveData);
 
+  document.start();
 }
+
+function handleLiveData(jobj) {
+  handleShaderFetch(jobj.name, jobj.data);
+
+  // Re-up
+  target = window.location.pathname;
+  if (target.endsWith('/')) target += 'keepLive';
+  else target += '/keepLive';
+  fetch(target)
+    .then(resp => resp.json())
+    .then(handleLiveData);
+}
+
 document.start = function() {
   if (! document.isPlaying)
     document.playInterval = setInterval(document.stepFrame, 100);
@@ -156,7 +174,6 @@ function handleAllDataFetch(data) {
 function handleShaderFetch(name, data) {
   if (data.startsWith('No code')) return;
 
-  console.log('fetched ' + data);
 
   // Compile Shaders
   let makeTup = (t,n) => { return {type: t, name: n} }
@@ -172,6 +189,7 @@ function handleShaderFetch(name, data) {
     [
       makeTup('vec2', 'in_uv'),
       makeTup('vec3', 'in_pos')]);
+  console.log('setting shader', name)
 
   // Setup Buffers
   // Each buffer except main gets two FBOs and two textures, so that we can ping-pong.
@@ -217,7 +235,6 @@ document.fullScreenQuad = function(shader) {
 
   if (shader.uniforms.__lookupGetter__('bufferA')) {
     shader.uniforms.bufferA = 1
-    //console.log('setting tex', shader.uniforms.bufferA, document.texs['bufferA'][1 - (document.tick%2)].handle);
     gl.activeTexture(gl.TEXTURE0 + shader.uniforms.bufferA)
     gl.bindTexture(gl.TEXTURE_2D, document.texs['bufferA'][1 - (document.tick%2)].handle);
   }
@@ -273,7 +290,6 @@ document.stepFrame = function () {
     let I = tick % 2, J = 1 - (tick % 2);
 
     document.fbos[name][I].bind();
-    console.log('binding fbo', name, 'parity',I);
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     document.fullScreenQuad(document.shaders[name])
